@@ -8,14 +8,13 @@ from typing import List, Tuple
 import chromadb
 import time
 from langchain.schema import Document
-import re
 
 
 # switch between shortened and full text
-# whichDB = "shortenedDB"
-whichDB = "FullDB"
+whichDB = "shortenedDB"
+# whichDB = "FullDB"
 
-CHROMA_PATH = "chroma_db_categoriesSplit"
+CHROMA_PATH = "chroma_db_v2"
 
 # Load environment variables
 load_dotenv()
@@ -45,12 +44,8 @@ text = load_text(DOC_PATH)
 
 # 2. Split data
 def split_text(text: str, chunk_size: int = 2000) -> list:
-    # text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=500)
-    # return text_splitter.create_documents([text])
-    
-    # Split the text based on the pattern
-    pattern = r'Category [0-9]—(?!Part|\n)'
-    return re.split(pattern, text)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=500)
+    return text_splitter.create_documents([text])
 
 chunks = split_text(text)
 # print(chunks[0])
@@ -113,17 +108,10 @@ def get_relevant_passage(query, db, n_results):
     """
     Retrieve relevant passages for the given query from the database.
     """
-    result = db.query(query_texts=[query], n_results=n_results)
-    passages = result['documents'][0]  # Assuming we want the first set of documents
-
-    
-    # Get the first 100 words
-    first_100_words = " ".join(passages[:10])
-    
-    # Print the first 100 words
-    print("First 100 words of the passage:\n", first_100_words, "\n")
-    
+    passages = db.query(query_texts=[query], n_results=n_results)['documents'][0]
+    print(passages, "\n")
     return passages
+
 # Make prompt for generative model
 def make_rag_prompt(query, relevant_passage):
     """
@@ -153,27 +141,15 @@ def generate_answer(prompt):
 # Final function to integrate all steps
 def generate_rag_answer(db, query):
     # Retrieve top 3 relevant text chunks
-    relevant_texts = get_relevant_passage(query, db, n_results=1)
-    # print("relevant texts: \n", relevant_texts)
+    relevant_texts = get_relevant_passage(query, db, n_results=3)
+    print("relevant texts: \n", relevant_texts)
     prompt = make_rag_prompt(query, relevant_passage="".join(relevant_texts))  # Joining the relevant chunks
     answer = generate_answer(prompt)
     return answer
 
-def main():
-    while True:
-        # Prompt the user for a query
-        query = input("Enter your query (or type 'exit' to quit): ")
-        
-        # Exit the loop if the user types 'exit'
-        if query.lower() == 'exit':
-            break
-        
-        # Generate the RAG answer
-        answer = generate_rag_answer(db, query=query)
-        
-        # Print the answer
-        print("Answer: \n")
-        print(answer)
+# enter query here
+# answer = generate_rag_answer(db, query="are there restrictions on water cannons used for riot control?")
+answer = generate_rag_answer(db, query="what are the relevant restrictions for vehicle bodies?")
 
-if __name__ == "__main__":
-    main()
+print("Answer: \n") 
+print(answer)

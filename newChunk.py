@@ -8,20 +8,22 @@ from typing import List, Tuple
 import chromadb
 import time
 from langchain.schema import Document
+# import re
+from openai import OpenAI
 
 
-# switch between shortened and full text
-whichDB = "shortenedDB"
-# whichDB = "FullDB"
 
 CHROMA_PATH = "chroma_db_v2"
-
+dbName = "RetryChunking"
 # Load environment variables
 load_dotenv()
 
-# Set up Gemini API
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
-genai.configure(api_key=GEMINI_API_KEY)
+# # Set up Gemini API
+# GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+# genai.configure(api_key=GEMINI_API_KEY)
+
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 # Indexing Step
 
@@ -31,10 +33,7 @@ def load_text(file_path):
         return file.read()
 
 # load txt file
-if whichDB == "shortenedDB":
-    DOC_PATH = "shortened.txt"
-else: 
-    DOC_PATH="parsedEARregsV1.txt"
+DOC_PATH="parsedEARregsV1.txt"
 text = load_text(DOC_PATH)
 
 # print out the first 3 lines of the text
@@ -43,7 +42,17 @@ text = load_text(DOC_PATH)
 #     print(f"{i + 1}: {line}")
 
 # 2. Split data
-def split_text(text: str, chunk_size: int = 2000) -> list:
+def split_text(text: str, chunk_size: int = 20000) -> list:
+
+    # pattern = r'Category [0-9]—(?!Part|\n)'
+    #  # Split the text based on the pattern
+    # sections = re.split(pattern, text)
+    
+    # # Create a list of documents
+    # documents = [{'text': section.strip()} for section in sections if section.strip()]
+    
+    # return documents
+
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=500)
     return text_splitter.create_documents([text])
 
@@ -90,7 +99,7 @@ def create_chroma_db(documents: List, path: str, name: str) -> Tuple[chromadb.Co
                 print(f"Error adding document {i}: {e}")    
     return db, name
 
-db, collection_name = create_chroma_db(documents=chunks, path=CHROMA_PATH, name=whichDB)
+db, collection_name = create_chroma_db(documents=chunks, path=CHROMA_PATH, name=dbName)
 
 # Function to load Chroma collection
 def load_chroma_collection(path: str, name: str):
@@ -101,7 +110,7 @@ def load_chroma_collection(path: str, name: str):
     return chroma_client.get_collection(name=name, embedding_function=GeminiEmbeddingFunction())
 
 # Load the database for future queries
-db = load_chroma_collection(path=CHROMA_PATH, name=whichDB)
+db = load_chroma_collection(path=CHROMA_PATH, name=dbName)
 
 # Retrieval from ChromaDB
 def get_relevant_passage(query, db, n_results):
@@ -109,7 +118,7 @@ def get_relevant_passage(query, db, n_results):
     Retrieve relevant passages for the given query from the database.
     """
     passages = db.query(query_texts=[query], n_results=n_results)['documents'][0]
-    print(passages, "\n")
+    # print(passages, "\n")
     return passages
 
 # Make prompt for generative model
@@ -129,27 +138,42 @@ At the end, quote which parts of the context helped you come up with this answer
 """).format(query=query, relevant_passage=escaped)
     return prompt
 
-# Generate answer using Gemini API
-def generate_answer(prompt):
-    """
-    Generates an answer using the Gemini API based on the provided prompt.
-    """
-    model = genai.GenerativeModel('gemini-pro')
-    answer = model.generate_content(prompt)
-    return answer.text
-
 # Final function to integrate all steps
 def generate_rag_answer(db, query):
-    # Retrieve top 3 relevant text chunks
-    relevant_texts = get_relevant_passage(query, db, n_results=3)
-    print("relevant texts: \n", relevant_texts)
+    # Retrieve most relevant text chunk
+    relevant_texts = get_relevant_passage(query, db, n_results=4)
+    # print("relevant texts: \n", relevant_texts)
     prompt = make_rag_prompt(query, relevant_passage="".join(relevant_texts))  # Joining the relevant chunks
-    answer = generate_answer(prompt)
-    return answer
+        
+    response = client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[
+        {"role": "user", "content": prompt}
+    ],
+    temperature=0.7
+    )
 
-# enter query here
-# answer = generate_rag_answer(db, query="are there restrictions on water cannons used for riot control?")
-answer = generate_rag_answer(db, query="what are the relevant restrictions for vehicle bodies?")
+    return response.choices[0].message.content
 
-print("Answer: \n") 
-print(answer)
+
+
+
+def main():
+    while True:
+        # Prompt the user for a query
+        query = input("Enter your query (or type 'exit' to quit): ")
+        
+        # Exit the loop if the user types 'exit'
+        if query.lower() == 'exit':
+            break
+        
+        # Generate the RAG answer
+        answer = generate_rag_answer(db, query=query)
+        
+        # Print the answer
+        print("Answer: \n")
+        print(answer)
+
+if __name__ == "__main__":
+    main()
+

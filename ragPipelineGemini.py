@@ -141,23 +141,17 @@ At the end, quote which parts of the context helped you come up with this answer
 """).format(query=query, relevant_passage=escaped)
     return prompt
 
-# Generate answer using Gemini API
-def generate_answer(prompt):
-    """
-    Generates an answer using the Gemini API based on the provided prompt.
-    """
-    model = genai.GenerativeModel('gemini-pro')
-    answer = model.generate_content(prompt)
-    return answer.text
 
 # Final function to integrate all steps
 def generate_rag_answer(db, query):
-    # Retrieve top 3 relevant text chunks
+    # Retrieve most relevant text chunk
     relevant_texts = get_relevant_passage(query, db, n_results=1)
     # print("relevant texts: \n", relevant_texts)
     prompt = make_rag_prompt(query, relevant_passage="".join(relevant_texts))  # Joining the relevant chunks
-    answer = generate_answer(prompt)
-    return answer
+    
+    model = genai.GenerativeModel('gemini-pro')
+    answer = model.generate_content(prompt)
+    return answer.text
 
 def main():
     while True:

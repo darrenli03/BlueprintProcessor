@@ -1,5 +1,6 @@
-#ignore everything in folder chroma_db
-chroma_db/*
+
 
 #ignore .env file
 .env
+
+backend/model/.env

@@ -64,7 +64,7 @@ const ExportControlSearch = () => {
         // const response = await fetch(`http://localhost:8000/get_part_details?search_query=${encodeURIComponent(searchQuery)}`);
       // dummy response markdown formatted
       // const response = "## Part Details\n\n- **Part Number:** 123456\n- **Description:** This is a test part\n- **Export Control Classification:** Class 1\n- **Export Control Classification Number:** 1234567890\n- **Export Control Classification Notes:** This is a test part";
-      const response = await fetch(`http://vcm-45281.vm.duke.edu:8000/get_part_details?search_query=${encodeURIComponent(searchQuery)}`);
+      const response = await fetch(`https://vcm-45281.vm.duke.edu:8000/get_part_details?search_query=${encodeURIComponent(searchQuery)}`);
 
 
         if (!response.ok) {

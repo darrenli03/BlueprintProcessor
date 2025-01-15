@@ -18,6 +18,8 @@ dbName = "RetryChunking"
 # Load environment variables
 load_dotenv()
 
+print("ChromaDB version: ", chromadb.__version__)
+
 # # Set up Gemini API
 # GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 # genai.configure(api_key=GEMINI_API_KEY)

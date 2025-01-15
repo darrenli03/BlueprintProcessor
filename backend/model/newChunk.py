@@ -129,14 +129,15 @@ def make_rag_prompt(query, relevant_passage):
     """
     escaped = relevant_passage.replace("'", "").replace('"', "").replace("\n", " ")
     prompt = ("""
- Answer the question based on the following context.
-    Context: {relevant_passage}
-    Question: {query}
-Provide a detailed answer.
-Don’t justify your answers.
-Don’t give information not mentioned in the CONTEXT INFORMATION.
-At the end, quote which parts of the context helped you come up with this answer
-""").format(query=query, relevant_passage=escaped)
+    Answer the question based on the following context.
+        Context: {relevant_passage}
+        Question: {query}
+    Provide a detailed answer.
+    Don’t justify your answers.
+    Don’t give information not mentioned in the CONTEXT INFORMATION.
+    At the end, quote which parts of the context helped you come up with this answer, 
+    and include the entirety of the context as the final part of the response.
+    """).format(query=query, relevant_passage=escaped)
     return prompt
 
 # Final function to integrate all steps
@@ -153,7 +154,7 @@ def generate_rag_answer(query):
     messages=[
         {"role": "user", "content": prompt}
     ],
-    temperature=0.7
+    temperature=0.1
     )
 
     return response.choices[0].message.content
